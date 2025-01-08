@@ -1,0 +1,106 @@
+
+
+# Function to get process input
+def get_process_input():
+    """
+    Collects process details from the user.
+    """
+    processes = []
+    num_processes = int(input("Enter the number of processes (3-10): "))
+    
+    for i in range(num_processes):
+        print(f"Process P{i}:")  # Correctly displays "P0", "P1", etc.
+        arrival_time = int(input(f"  Arrival Time: "))
+        burst_time = int(input(f"  Burst Time: "))
+        processes.append({
+            "pid": f"P{i}",  # Assigns process IDs starting from P0
+            "arrival_time": arrival_time,
+            "burst_time": burst_time,
+            "remaining_time": burst_time
+        })
+    
+    return processes
+
+
+# Round Robin Scheduling Function
+def round_robin(processes, quantum):
+    queue = []
+    time = 0
+    gantt_chart = []
+    remaining_burst = {p['pid']: p['burst_time'] for p in processes}
+    completion_times = {}
+
+    while any(bt > 0 for bt in remaining_burst.values()):
+        for process in processes:
+            if process['arrival_time'] <= time and process['pid'] not in queue and remaining_burst[process['pid']] > 0:
+                queue.append(process['pid'])
+
+        if queue:
+            current_process = queue.pop(0)
+            if remaining_burst[current_process] > quantum:
+                gantt_chart.append((current_process, time, time + quantum))
+                time += quantum
+                remaining_burst[current_process] -= quantum
+                queue.append(current_process)  # Re-add to the queue
+            else:
+                gantt_chart.append((current_process, time, time + remaining_burst[current_process]))
+                time += remaining_burst[current_process]
+                remaining_burst[current_process] = 0
+                completion_times[current_process] = time  # Record completion time
+        else:
+            time += 1  # Idle time if no process is ready
+
+    return gantt_chart, completion_times
+
+# Function to calculate and display metrics
+def calculate_metrics(processes, completion_times):
+    turnaround_times = {}
+    waiting_times = {}
+    total_tat = 0
+    total_wt = 0
+
+    for process in processes:
+        pid = process['pid']
+        tat = completion_times[pid] - process['arrival_time']
+        wt = tat - process['burst_time']
+        turnaround_times[pid] = tat
+        waiting_times[pid] = wt
+        total_tat += tat
+        total_wt += wt
+
+    avg_tat = total_tat / len(processes)
+    avg_wt = total_wt / len(processes)
+
+    print("\nMetrics:")
+    print(f"{'Process':<10}{'TAT':<10}{'WT':<10}")
+    for pid in turnaround_times:
+        print(f"{pid:<10}{turnaround_times[pid]:<10}{waiting_times[pid]:<10}")
+    print(f"\nAverage Turnaround Time: {avg_tat:.2f}")
+    print(f"Average Waiting Time: {avg_wt:.2f}")
+
+# Function to draw Gantt Chart
+def draw_gantt_chart(gantt_chart):
+    fig, ax = plt.subplots()
+    for process, start, end in gantt_chart:
+        ax.barh(1, end - start, left=start, label=process)
+
+    ax.set_yticks([])
+    ax.set_xlabel("Time")
+    ax.set_title("Gantt Chart - Round Robin")
+    ax.legend()
+    plt.show()
+
+# Main Function
+def main():
+    print("Round Robin Scheduling Simulation (Quantum = 3)")
+    quantum = 3  # Fixed quantum for Part A
+    processes = get_process_input()
+
+    gantt_chart, completion_times = round_robin(processes, quantum)
+    print("\nGantt Chart:", gantt_chart)
+
+    draw_gantt_chart(gantt_chart)
+    calculate_metrics(processes, completion_times)
+
+if __name__ == "__main__":
+    main()
